@@ -1,0 +1,144 @@
+---
+title: "Offensive Contribution Prediction Model of Players Based on La Liga 2023/2024 Season"
+author: "Jingwei Chen"
+format: 
+  closeread-html:
+    theme: cosmo
+    cr-section:
+      layout: sidebar-left
+    cr-style:
+      section-background-color: white
+      narrative-background-color-sidebar: lightblue
+      narrative-text-color-sidebar: black
+      narrative-font-size: 1em
+      narrative-sidebar-width: 300px
+embed-resources: true
+---
+
+```{r setup, include=FALSE}
+# load packages and/or import data set(s)
+library(tidyverse)
+library(plotly)
+soccer <- read_csv("S2324-laliga-players.csv")
+```
+
+:::: {.cr-section}
+
+Categorizing or changing our data. @cr-code1
+
+::: {#cr-code1}
+According to our orinigal csv document, we would like to combine the data of "shots_off_target_inc_woodwork" 
+
+and "shots_on_target_inc_goals" together to form a new variable "shots".
+```{r}
+#| echo: true
+soccer <- soccer |>
+    mutate(shots = shots_off_target_inc_woodwork + shots_on_target_inc_goals)
+```
+
+We also have to filter out those players who have no goals thorought the season, because factors like 
+
+injury and special position (GK specifically) will have a dramatic impact to our goal prediction model.
+```{r}
+#| echo: true
+soccer <- soccer |>
+    filter(goals > 0)
+```
+:::
+
+::::
+
+:::: {.cr-section}
+
+Now, we take a look at the graph. @cr-plot1
+
+::: {#cr-plot1}
+```{r}
+#| warning: false
+#| message: false
+
+plot <- soccer |>
+  ggplot(aes(x = total_passes, y = goals, color = position)) +
+  geom_point(size = 0.8) +
+  geom_smooth(method = "lm") +
+  labs(
+    x = "Total Passes",
+    y = "Goals",
+    title = "Scatter Plot of Each Goal Scorers' Data of Goals and Passes"
+  )
+
+plot
+```
+:::
+
+::::
+
+:::: {.cr-section}
+
+Some elements inside the regression line. @cr-text1
+
+::: {#cr-text1}
+To form a regression line, we have to consider what are some important factors that would potentially contribute to a goal:
+
+· Total Passes
+
+· Successful Dribbles
+
+· Corners Won
+
+· Penalties Taken
+
+· Shots
+
+```{r}
+#| echo: true
+model <- lm(goals ~ total_passes + successful_dribbles + corners_won + penalties_taken + shots, data = soccer)
+model
+```
+:::
+
+Let's predict by randomly choosing a player from La Liga. @cr-text2
+
+::: {#cr-text2}
+
+Given that, in La Liga 2023/2024 season, the player Artem Dovbyk has a data of 386 total passes, 17 successful dribbles, 
+
+12 corners won, 8 penalties taken, and 77 shots, we can predict his total season goal by importing these data into our 
+
+goal prediction model.
+
+```{r}
+#| echo: true
+data <- data.frame(total_passes = 386,
+                   successful_dribbles = 17,
+                   corners_won = 12,
+                   penalties_taken = 8,
+                   shots = 77)
+```
+:::
+
+Checking our goal prediction number with the real goal number. @cr-text3
+
+::: {#cr-text3}
+```{r}
+#| echo: true
+predict(model, data)
+```
+
+So, the predicted goals is `r predict(model, data)`, which is approximately 22 goals, and let's reveal the Artem Dovbyk's real goals:
+
+```{r}
+#| echo: true
+soccer$goals[soccer$name == "Artem Dovbyk"][1]
+```
+
+We have a residual of only 2 goals; this indicates that the selected offensive variables capture a substantial portion of the player's scoring performance.
+:::
+
+Multiple Regression Line Expression. @cr-text4
+
+::: {#cr-text4}
+Expected Goals = - 0.860570 - 0.001295 * Total Passes + 0.008045 * Successful Dribbles - 0.078516 * Corners Won + 1.025462 * Penalties Taken + 0.205220 * Shots
+:::
+
+::::
